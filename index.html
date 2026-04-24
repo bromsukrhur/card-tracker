@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>카드 실적 관리</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f5f7;
+    --card-bg: #ffffff;
+    --border: #e5e7eb;
+    --text: #111;
+    --text2: #555;
+    --text3: #999;
+    --primary: #185FA5;
+    --green: #1D9E75;
+    --amber: #BA7517;
+    --red: #A32D2D;
+    --green-bg: #EAF3DE;
+    --amber-bg: #FAEEDA;
+    --red-bg: #FCEBEB;
+    --radius: 14px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1e;
+      --card-bg: #2c2c2e;
+      --border: #3a3a3c;
+      --text: #f5f5f7;
+      --text2: #aeaeb2;
+      --text3: #636366;
+      --green-bg: #1a3a2a;
+      --amber-bg: #3a2a10;
+      --red-bg: #3a1a1a;
+    }
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 40px;
+  }
+
+  header {
+    background: var(--card-bg);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 20px 12px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  header h1 { font-size: 18px; font-weight: 600; }
+  header p { font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+  .container { max-width: 640px; margin: 0 auto; padding: 16px; }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .stat {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+
+  .stat-label { font-size: 11px; color: var(--text3); margin-bottom: 4px; }
+  .stat-value { font-size: 22px; font-weight: 600; color: var(--text); }
+  .stat-value.green { color: var(--green); }
+  .stat-value.amber { color: var(--amber); }
+
+  .tab-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .tab-row::-webkit-scrollbar { display: none; }
+
+  .tab {
+    font-size: 13px;
+    padding: 6px 16px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+  .cards-list { display: flex; flex-direction: column; gap: 12px; }
+
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .card-name { font-size: 15px; font-weight: 600; }
+
+  .badge {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 500;
+  }
+  .badge-ok { background: var(--green-bg); color: var(--green); }
+  .badge-warn { background: var(--amber-bg); color: var(--amber); }
+  .badge-fail { background: var(--red-bg); color: var(--red); }
+
+  .progress-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text2);
+    margin-bottom: 6px;
+  }
+
+  .progress-bg {
+    height: 7px;
+    background: var(--bg);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.4s ease;
+  }
+  .fill-ok { background: var(--primary); }
+  .fill-warn { background: var(--amber); }
+  .fill-done { background: var(--green); }
+
+  .info-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: var(--text2);
+    margin-bottom: 10px;
+  }
+
+  .info-chip {
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 4px 10px;
+    font-size: 12px;
+  }
+
+  .info-chip span { font-weight: 600; color: var(--text); }
+
+  .benefit-text {
+    font-size: 12px;
+    color: var(--text3);
+    margin-bottom: 12px;
+    padding: 6px 10px;
+    background: var(--bg);
+    border-radius: 8px;
+    border-left: 3px solid var(--primary);
+  }
+
+  .input-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .input-row input {
+    flex: 1;
+    font-size: 14px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--card-bg);
+    color: var(--text);
+    outline: none;
+  }
+  .input-row input:focus { border-color: var(--primary); }
+
+  .btn-update {
+    font-size: 13px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: none;
+    background: var(--primary);
+    color: #fff;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .btn-edit {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+  }
+
+  /* 모달 */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 100;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--card-bg);
+    border-radius: 20px 20px 0 0;
+    padding: 20px 20px 36px;
+    width: 100%;
+    max-width: 640px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-handle {
+    width: 36px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 0 auto 16px;
+  }
+
+  .modal h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+
+  .field { margin-bottom: 14px; }
+  .field label { font-size: 12px; color: var(--text2); display: block; margin-bottom: 6px; }
+  .field input {
+    width: 100%;
+    font-size: 14px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--card-bg);
+    color: var(--text);
+    outline: none;
+  }
+  .field input:focus { border-color: var(--primary); }
+
+  .modal-btns {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  .btn-save {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 12px;
+    border-radius: 12px;
+    border: none;
+    background: var(--primary);
+    color: #fff;
+    cursor: pointer;
+  }
+  .btn-cancel {
+    flex: 1;
+    font-size: 14px;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+  }
+
+  .reset-btn {
+    display: block;
+    margin: 24px auto 0;
+    font-size: 12px;
+    color: var(--text3);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+
+  .empty { text-align: center; font-size: 14px; color: var(--text3); padding: 40px 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>카드 실적 관리</h1>
+  <p id="headerDate"></p>
+</header>
+
+<div class="container">
+  <div class="summary-grid" id="summaryGrid"></div>
+
+  <div class="tab-row" id="tabRow"></div>
+
+  <div class="cards-list" id="cardsList"></div>
+
+  <button class="reset-btn" onclick="confirmReset()">데이터 초기화</button>
+</div>
+
+<!-- 수정 모달 -->
+<div class="modal-overlay" id="modalOverlay" onclick="handleOverlayClick(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3 id="modalTitle">카드 정보 수정</h3>
+    <div class="field"><label>카드 이름</label><input id="mName" /></div>
+    <div class="field"><label>월 실적 목표 (원)</label><input id="mTarget" type="number" placeholder="예: 300000" /></div>
+    <div class="field"><label>이번 달 사용 금액 (원)</label><input id="mUsed" type="number" placeholder="예: 150000" /></div>
+    <div class="field"><label>월 한도 (원)</label><input id="mLimit" type="number" placeholder="예: 1000000" /></div>
+    <div class="field"><label>혜택 메모</label><input id="mBenefit" placeholder="예: 전월 실적 30만원 이상 시 5% 할인" /></div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">취소</button>
+      <button class="btn-save" onclick="saveCard()">저장</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const KEY = 'card_tracker_v2';
+let editIdx = null;
+let currentFilter = 'all';
+
+const defaults = [
+  { name: '신한카드 1', brand: '신한', target: 300000, used: 0, limit: 1000000, benefit: '실적 달성 시 혜택 제공' },
+  { name: '신한카드 2', brand: '신한', target: 300000, used: 0, limit: 1000000, benefit: '실적 달성 시 혜택 제공' },
+  { name: '신한카드 3', brand: '신한', target: 300000, used: 0, limit: 1000000, benefit: '실적 달성 시 혜택 제공' },
+  { name: '신한카드 4', brand: '신한', target: 300000, used: 0, limit: 1000000, benefit: '실적 달성 시 혜택 제공' },
+  { name: '신한카드 5', brand: '신한', target: 300000, used: 0, limit: 1000000, benefit: '실적 달성 시 혜택 제공' },
+  { name: '신한카드 6', brand: '신한', target: 300000, used: 0, limit: 1000000, benefit: '실적 달성 시 혜택 제공' },
+  { name: '신한카드 7', brand: '신한', target: 300000, used: 0, limit: 1000000, benefit: '실적 달성 시 혜택 제공' },
+  { name: '하나카드 1', brand: '하나', target: 300000, used: 0, limit: 1000000, benefit: '실적 달성 시 캐시백' },
+  { name: '삼성카드 1', brand: '삼성', target: 300000, used: 0, limit: 1000000, benefit: '실적 달성 시 포인트 적립' },
+];
+
+function load() {
+  try { const s = localStorage.getItem(KEY); return s ? JSON.parse(s) : JSON.parse(JSON.stringify(defaults)); }
+  catch { return JSON.parse(JSON.stringify(defaults)); }
+}
+
+function save() { try { localStorage.setItem(KEY, JSON.stringify(cards)); } catch {} }
+
+let cards = load();
+
+function fmt(n) { return Math.round(n).toLocaleString('ko-KR'); }
+function pct(used, target) { return Math.min(100, Math.round((used / target) * 100)); }
+function status(used, target) { const p = pct(used, target); return p >= 100 ? 'ok' : p >= 60 ? 'warn' : 'fail'; }
+
+function renderDate() {
+  const d = new Date();
+  const months = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  document.getElementById('headerDate').textContent = `${d.getFullYear()}년 ${months[d.getMonth()]} 기준`;
+}
+
+function renderSummary() {
+  const achieved = cards.filter(c => c.used >= c.target).length;
+  const totalRemain = cards.reduce((s, c) => s + Math.max(0, c.limit - c.used), 0);
+  const needTotal = cards.filter(c => c.used < c.target).reduce((s, c) => s + (c.target - c.used), 0);
+  document.getElementById('summaryGrid').innerHTML = `
+    <div class="stat">
+      <div class="stat-label">실적 달성</div>
+      <div class="stat-value green">${achieved} / ${cards.length}장</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">미달성 카드</div>
+      <div class="stat-value amber">${cards.length - achieved}장</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">총 잔여 한도</div>
+      <div class="stat-value">${fmt(totalRemain)}원</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">실적 추가 필요</div>
+      <div class="stat-value">${fmt(needTotal)}원</div>
+    </div>
+  `;
+}
+
+function renderTabs() {
+  const brands = ['all', '신한', '하나', '삼성'];
+  const labels = { all: '전체', '신한': '신한', '하나': '하나', '삼성': '삼성' };
+  const counts = {};
+  cards.forEach(c => { counts[c.brand] = (counts[c.brand] || 0) + 1; });
+  document.getElementById('tabRow').innerHTML = brands.map(b => {
+    const cnt = b === 'all' ? cards.length : (counts[b] || 0);
+    return `<button class="tab${currentFilter === b ? ' active' : ''}" onclick="filterCards('${b}', this)">${labels[b]} ${cnt}</button>`;
+  }).join('');
+}
+
+function renderCards() {
+  const filtered = currentFilter === 'all' ? cards : cards.filter(c => c.brand === currentFilter);
+  const list = document.getElementById('cardsList');
+  if (!filtered.length) { list.innerHTML = '<div class="empty">해당 카드 없음</div>'; return; }
+
+  list.innerHTML = filtered.map(c => {
+    const idx = cards.indexOf(c);
+    const p = pct(c.used, c.target);
+    const st = status(c.used, c.target);
+    const remain = Math.max(0, c.limit - c.used);
+    const need = Math.max(0, c.target - c.used);
+    const fillClass = st === 'ok' ? 'fill-done' : st === 'warn' ? 'fill-warn' : 'fill-ok';
+    const badgeClass = st === 'ok' ? 'badge-ok' : st === 'warn' ? 'badge-warn' : 'badge-fail';
+    const badgeText = st === 'ok' ? '달성' : st === 'warn' ? '진행중' : '미달성';
+
+    return `
+    <div class="card">
+      <div class="card-header">
+        <div class="card-name">${c.name}</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="badge ${badgeClass}">${badgeText}</span>
+          <button class="btn-edit" onclick="openModal(${idx})">수정</button>
+        </div>
+      </div>
+
+      <div class="progress-labels">
+        <span>사용 ${fmt(c.used)}원</span>
+        <span>목표 ${fmt(c.target)}원 · ${p}%</span>
+      </div>
+      <div class="progress-bg">
+        <div class="progress-fill ${fillClass}" style="width:${p}%"></div>
+      </div>
+
+      <div class="info-row">
+        <div class="info-chip">잔여 한도 <span>${fmt(remain)}원</span></div>
+        ${need > 0
+          ? `<div class="info-chip">실적까지 <span>${fmt(need)}원</span> 남음</div>`
+          : `<div class="info-chip" style="color:var(--green)">실적 달성 완료!</div>`}
+      </div>
+
+      ${c.benefit ? `<div class="benefit-text">${c.benefit}</div>` : ''}
+
+      <div class="input-row">
+        <input type="number" id="quick_${idx}" placeholder="이번달 사용금액 입력" value="${c.used || ''}" />
+        <button class="btn-update" onclick="quickUpdate(${idx})">적용</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function render() {
+  renderDate();
+  renderSummary();
+  renderTabs();
+  renderCards();
+}
+
+function filterCards(brand, btn) {
+  currentFilter = brand;
+  render();
+}
+
+function quickUpdate(idx) {
+  const input = document.getElementById(`quick_${idx}`);
+  const v = parseInt(input.value);
+  if (!isNaN(v) && v >= 0) {
+    cards[idx].used = v;
+    save();
+    render();
+  }
+}
+
+function openModal(idx) {
+  editIdx = idx;
+  const c = cards[idx];
+  document.getElementById('mName').value = c.name;
+  document.getElementById('mTarget').value = c.target;
+  document.getElementById('mUsed').value = c.used;
+  document.getElementById('mLimit').value = c.limit;
+  document.getElementById('mBenefit').value = c.benefit;
+  document.getElementById('modalTitle').textContent = c.name + ' 수정';
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  editIdx = null;
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+}
+
+function saveCard() {
+  if (editIdx === null) return;
+  const name = document.getElementById('mName').value.trim();
+  cards[editIdx].name = name || cards[editIdx].name;
+  cards[editIdx].target = parseInt(document.getElementById('mTarget').value) || 0;
+  cards[editIdx].used = parseInt(document.getElementById('mUsed').value) || 0;
+  cards[editIdx].limit = parseInt(document.getElementById('mLimit').value) || 0;
+  cards[editIdx].benefit = document.getElementById('mBenefit').value.trim();
+  const n = cards[editIdx].name;
+  cards[editIdx].brand = n.includes('하나') ? '하나' : n.includes('삼성') ? '삼성' : '신한';
+  save();
+  closeModal();
+  render();
+}
+
+function confirmReset() {
+  if (confirm('모든 데이터를 초기화할까요?')) {
+    cards = JSON.parse(JSON.stringify(defaults));
+    save();
+    render();
+  }
+}
+
+render();
+</script>
+</body>
+</html>
